@@ -38,33 +38,33 @@ PvPScriptsItem < Panel
 ]])
 
 local addScrollBar = function(id, title, min, max, defaultValue, dest, tooltip)
-    local widget = UI.createWidget("PvPScriptsScrollBar", dest)
-    widget.text:setTooltip(tooltip)
-    widget.scroll.onValueChange = function(scroll, value)
-      widget.text:setText(title..value)
-      if value == 0 then
-        value = 1
-      end
-      storage[id] = value
-    end
-    widget.scroll:setRange(min, max)
-    widget.scroll:setTooltip(tooltip)
-    widget.scroll:setValue(storage[id] or defaultValue)
-    widget.scroll.onValueChange(widget.scroll, widget.scroll:getValue())
+	local widget = UI.createWidget("PvPScriptsScrollBar", dest)
+	widget.text:setTooltip(tooltip)
+	widget.scroll.onValueChange = function(scroll, value)
+		widget.text:setText(title .. value)
+		if value == 0 then
+			value = 1
+		end
+		storage[id] = value
+	end
+	widget.scroll:setRange(min, max)
+	widget.scroll:setTooltip(tooltip)
+	widget.scroll:setValue(storage[id] or defaultValue)
+	widget.scroll.onValueChange(widget.scroll, widget.scroll:getValue())
 end
 
 local addItem = function(id, title, defaultItem, dest, tooltip)
-    local widget = UI.createWidget('PvPScriptsItem', dest)
-    widget:setId(id)
-    widget.text:setText(title)
-    widget.text:setTooltip(tooltip)
-    widget.item:setTooltip(tooltip)
-    widget.item:setItemId(storage[id] or defaultItem)
-    widget.item.onItemChange = function(widget)
-      storage[id] = widget:getItemId()
-    end
-    storage[id] = storage[id] or defaultItem
-    return widget
+	local widget = UI.createWidget("PvPScriptsItem", dest)
+	widget:setId(id)
+	widget.text:setText(title)
+	widget.text:setTooltip(tooltip)
+	widget.item:setTooltip(tooltip)
+	widget.item:setItemId(storage[id] or defaultItem)
+	widget.item.onItemChange = function(widget)
+		storage[id] = widget:getItemId()
+	end
+	storage[id] = storage[id] or defaultItem
+	return widget
 end
 
 addLabel()
@@ -76,30 +76,30 @@ addItem("ERing", "Energy Ring", storage.ERing or 3051, nil, "")
 addItem("ERingEquipped", "Ring Normal", storage.ERingEquipped or 3088, nil, "")
 
 s.equipItem = function(normalId, activeId, slot)
-    local item = getInventoryItem(slot)
-    if item and item:getId() == activeId then
-        return false
-    end
-  
-    if g_game.getClientVersion() >= 870 then
-      g_game.equipItemId(activeId)
-      return true
-    end
-  
-    local itemToEquip = findItem(activeId)
-    if itemToEquip then
-        moveToSlot(itemToEquip, slot, itemToEquip:getCount())
-        return true
-    end
+	local item = getInventoryItem(slot)
+	if item and item:getId() == activeId then
+		return false
+	end
+
+	if g_game.getClientVersion() >= 870 then
+		g_game.equipItemId(activeId)
+		return true
+	end
+
+	local itemToEquip = findItem(activeId)
+	if itemToEquip then
+		moveToSlot(itemToEquip, slot, itemToEquip:getCount())
+		return true
+	end
 end
 
-s.m_main = macro(200, "Energy Ring", function() 
-  local hp = hppercent()
-  local mp = manapercent()
+s.m_main = macro(200, "Energy Ring", function()
+	local hp = hppercent()
+	local mp = manapercent()
 
-  if hp <= storage.ERingHPGreater then
-      s.equipItem(storage.ERingEquipped, storage.ERing, SlotFinger)
-  elseif hp >= storage.ERingHPLess then
-      s.equipItem(storage.ERing, storage.ERingEquipped, SlotFinger)
-  end
+	if hp <= storage.ERingHPGreater then
+		s.equipItem(storage.ERingEquipped, storage.ERing, SlotFinger)
+	elseif hp >= storage.ERingHPLess then
+		s.equipItem(storage.ERing, storage.ERingEquipped, SlotFinger)
+	end
 end)
