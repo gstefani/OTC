@@ -7,8 +7,8 @@
 -- Configuration
 --------------------------------------------------------------------------------------------------------
 local MAX_WALK_DISTANCE = 5 -- Maximum distance to look for safe zones (max 7 recommended for performance)
-local DELAY_AFTER_WALK = 500 -- Delay after walking to avoid lag (max 500)
-local AVOIDED_EFFECT_IDS = { 413, 43, 3383, 3361 } -- List of effect IDs to avoid
+local DELAY_AFTER_WALK = 300 -- Delay after walking to avoid lag (max 500)
+local AVOIDED_EFFECT_IDS = { 413, 43, 3383, 3361, 55636 } -- List of effect IDs to avoid
 
 --------------------------------------------------------------------------------------------------------
 -- Diagonal Movement Offsets
