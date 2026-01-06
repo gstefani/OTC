@@ -1,7 +1,7 @@
 setDefaultTab("Tools")
 
 local DANGER_TILE_ID = 55636
-local MAX_BOSS_RADIUS = 3 -- raio em SQM a partir do boss
+local SEARCH_RADIUS = 3 -- SQMs
 local MOVE_COOLDOWN = 200 -- ms
 
 local function nowMs()
@@ -32,7 +32,7 @@ local function manhattan(a, b)
 	return math.abs(a.x - b.x) + math.abs(a.y - b.y)
 end
 
-local function findSafeTileAroundBoss(bossPos, playerPos, maxRadius, dangerId)
+local function findSafeTileCross(centerPos, playerPos, radius, dangerId)
 	local bestDist, bestPos = nil, nil
 
 	local directions = {
@@ -43,11 +43,11 @@ local function findSafeTileAroundBoss(bossPos, playerPos, maxRadius, dangerId)
 	}
 
 	for _, dir in ipairs(directions) do
-		for step = 1, maxRadius do
+		for step = 1, radius do
 			local p = {
-				x = bossPos.x + dir.dx * step,
-				y = bossPos.y + dir.dy * step,
-				z = bossPos.z,
+				x = centerPos.x + dir.dx * step,
+				y = centerPos.y + dir.dy * step,
+				z = centerPos.z,
 			}
 
 			local tile = g_map.getTile(p)
@@ -64,10 +64,9 @@ local function findSafeTileAroundBoss(bossPos, playerPos, maxRadius, dangerId)
 	return bestPos
 end
 
-local lastMove = 0
-
 -- Macro Principal
-macro(200, "Boss Safe Position (Tile ID)", function(m)
+local lastMove = 0
+macro(200, "Boss Safe Position (2 Modos)", function(m)
 	if not m:isOn() then
 		return
 	end
@@ -77,18 +76,23 @@ macro(200, "Boss Safe Position (Tile ID)", function(m)
 		return
 	end
 
-	local boss = g_game.getAttackingCreature()
-	if not boss then
-		return
-	end
-
-	local bossPos = boss:getPosition()
 	local playerPos = pos()
-	if not bossPos or not playerPos then
+	if not playerPos then
 		return
 	end
 
-	local safePos = findSafeTileAroundBoss(bossPos, playerPos, MAX_BOSS_RADIUS, DANGER_TILE_ID)
+	local boss = g_game.getAttackingCreature()
+	local centerPos
+
+	if boss and boss:getPosition() then
+		-- MODO 1: com target (boss como centro)
+		centerPos = boss:getPosition()
+	else
+		-- MODO 2: sem target (player como centro)
+		centerPos = playerPos
+	end
+
+	local safePos = findSafeTileCross(centerPos, playerPos, SEARCH_RADIUS, DANGER_TILE_ID)
 
 	if safePos then
 		autoWalk(safePos, 50, {
