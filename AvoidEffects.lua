@@ -1,159 +1,100 @@
---Join Discord server for free scripts
---https://discord.gg/RkQ9nyPMBH
---Made By VivoDibra
---Tested on vBot 4.8 / OTCV8 3.2 rev 4
+setDefaultTab("Tools")
 
---------------------------------------------------------------------------------------------------------
--- Configuration
---------------------------------------------------------------------------------------------------------
-local MAX_WALK_DISTANCE = 5 -- Maximum distance to look for safe zones (max 7 recommended for performance)
-local DELAY_AFTER_WALK = 300 -- Delay after walking to avoid lag (max 500)
-local AVOIDED_EFFECT_IDS = { 413, 43, 3383, 3361, 55636 } -- List of effect IDs to avoid
+local DANGER_TILE_ID = 55636
+local MAX_BOSS_RADIUS = 3 -- raio em SQM a partir do boss
+local MOVE_COOLDOWN = 200 -- ms
 
---------------------------------------------------------------------------------------------------------
--- Diagonal Movement Offsets
---------------------------------------------------------------------------------------------------------
-local diagonalOffsets = {
-	{ x = -1, y = -1, dir = NorthWest },
-	{ x = 1, y = -1, dir = NorthEast },
-	{ x = -1, y = 1, dir = SouthWest },
-	{ x = 1, y = 1, dir = SouthEast },
-}
-
---------------------------------------------------------------------------------------------------------
--- State Variables
---------------------------------------------------------------------------------------------------------
-local avoidEffectsMacro = macro(10000, "Avoid Effects", function() end)
-local safeTiles = {}
-local isAvoiding = false
-local lastSafePosition = nil
-
---------------------------------------------------------------------------------------------------------
--- Utility Functions
---------------------------------------------------------------------------------------------------------
-
--- Marks a tile as temporarily invalid for walking
-local function markTileAsInvalid(tile)
-	tile.invalid = true
-	tile:setText("Invalid")
-	schedule(500, function()
-		if tile then
-			tile.invalid = false
-			tile:setText("")
-		end
-	end)
+local function nowMs()
+	if g_clock and g_clock.millis then
+		return g_clock.millis()
+	end
+	return os.time() * 1000
 end
 
---------------------------------------------------------------------------------------------------------
--- Event Handlers
---------------------------------------------------------------------------------------------------------
-
--- Handles the appearance of new effects and updates the tile text
-onAddThing(function(tile, thing)
-	if avoidEffectsMacro.isOff() or not thing:isEffect() then
-		return
+local function tileHasThingId(tile, targetId)
+	if not tile then
+		return false
+	end
+	local things = tile:getThings()
+	if not things then
+		return false
 	end
 
-	if not table.find(AVOIDED_EFFECT_IDS, thing:getId()) then
-		tile:setText(thing:getId())
-		schedule(1000, function()
-			if tile then
-				tile:setText("")
-			end
-		end)
-	else
-		markTileAsInvalid(tile)
-	end
-end)
-
--- Detects if the player is standing on an avoided effect and finds a nearby safe tile
-onAddThing(function(tile, thing)
-	if avoidEffectsMacro.isOff() or not tile or not thing or not thing:isEffect() then
-		return
-	end
-
-	local playerPos = pos()
-	local tilePos = tile:getPosition()
-
-	if not table.equals(tilePos, playerPos) then
-		return
-	end
-	if not table.find(AVOIDED_EFFECT_IDS, thing:getId()) then
-		return
-	end
-	if isAvoiding then
-		return
-	end
-
-	isAvoiding = true
-
-	-- Clear previous safe tile entries
-	for i = 1, MAX_WALK_DISTANCE do
-		safeTiles[i] = {}
-	end
-
-	-- Scan for valid tiles
-	schedule(100, function()
-		for _, mapTile in ipairs(g_map.getTiles(playerPos.z)) do
-			local distance = getDistanceBetween(playerPos, mapTile:getPosition())
-			if distance < MAX_WALK_DISTANCE and not mapTile.invalid and mapTile:isWalkable() and findPath(playerPos, mapTile:getPosition(), 10) then
-				table.insert(safeTiles[distance], mapTile)
-				if #safeTiles[1] > 0 then
-					break
-				end -- Early exit if tile is adjacent
-			end
+	for _, thing in ipairs(things) do
+		if thing.getId and thing:getId() == targetId then
+			return true
 		end
+	end
+	return false
+end
 
-		-- Try to walk to the closest safe tile
-		for distance = 1, MAX_WALK_DISTANCE do
-			if #safeTiles[distance] > 0 then
-				local targetTile = safeTiles[distance][1]
-				local targetPos = targetTile:getPosition()
-				lastSafePosition = targetPos
+local function manhattan(a, b)
+	return math.abs(a.x - b.x) + math.abs(a.y - b.y)
+end
 
-				-- If tile is adjacent, use direct walk direction
-				if distance == 1 then
-					for _, offset in ipairs(diagonalOffsets) do
-						local offsetPos = { x = posx() + offset.x, y = posy() + offset.y, z = posz() }
-						if table.equals(offsetPos, targetPos) then
-							g_game.walk(offset.dir)
-							schedule(DELAY_AFTER_WALK, function()
-								isAvoiding = false
-							end)
-							return
-						end
-					end
+local function findSafeTileAroundBoss(bossPos, playerPos, maxRadius, dangerId)
+	local bestDist, bestPos = nil, nil
+
+	local directions = {
+		{ dx = 1, dy = 0 }, -- leste
+		{ dx = -1, dy = 0 }, -- oeste
+		{ dx = 0, dy = 1 }, -- sul
+		{ dx = 0, dy = -1 }, -- norte
+	}
+
+	for _, dir in ipairs(directions) do
+		for step = 1, maxRadius do
+			local p = {
+				x = bossPos.x + dir.dx * step,
+				y = bossPos.y + dir.dy * step,
+				z = bossPos.z,
+			}
+
+			local tile = g_map.getTile(p)
+			if tile and not tileHasThingId(tile, dangerId) then
+				local dist = manhattan(playerPos, p)
+				if not bestDist or dist < bestDist then
+					bestDist = dist
+					bestPos = p
 				end
-
-				-- Otherwise, use autoWalk
-				autoWalk(targetPos)
-				schedule(DELAY_AFTER_WALK, function()
-					isAvoiding = false
-				end)
-				break
 			end
 		end
-	end)
-end)
-
---------------------------------------------------------------------------------------------------------
--- Macro: Retry walking to last safe position
---------------------------------------------------------------------------------------------------------
-macro(500, "Force Walk Retry", function()
-	if lastSafePosition then
-		player:autoWalk(lastSafePosition, true)
 	end
 
-	if lastSafePosition and table.equals(pos(), lastSafePosition) then
-		lastSafePosition = nil
+	return bestPos
+end
+
+local lastMove = 0
+
+-- Macro Principal
+macro(200, "Boss Safe Position (Tile ID)", function(m)
+	if not m:isOn() then
+		return
+	end
+
+	local now = nowMs()
+	if now - lastMove < MOVE_COOLDOWN then
+		return
+	end
+
+	local boss = g_game.getAttackingCreature()
+	if not boss then
+		return
+	end
+
+	local bossPos = boss:getPosition()
+	local playerPos = pos()
+	if not bossPos or not playerPos then
+		return
+	end
+
+	local safePos = findSafeTileAroundBoss(bossPos, playerPos, MAX_BOSS_RADIUS, DANGER_TILE_ID)
+
+	if safePos then
+		autoWalk(safePos, 50, {
+			precision = 1,
+			ignoreNonPathable = true,
+		})
+		lastMove = now
 	end
 end)
-
-addButton("", "+ Free Scripts", function()
-	g_platform.openUrl("https://discord.gg/RkQ9nyPMBH")
-end)
-
---Join Discord server for free scripts
---https://discord.gg/RkQ9nyPMBH
---Made By VivoDibra
---Tested on vBot 4.8 / OTCV8 3.2 rev 4

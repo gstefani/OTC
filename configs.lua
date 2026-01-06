@@ -334,7 +334,7 @@ macro(50, "Bug Map - Mouse", function(m)
 	if not tile then
 		return
 	end
-	if g_mouse.isPressed(7) then
+	if g_mouse.isPressed(4) then
 		g_game.use(tile:getTopUseThing())
 	end
 end)
