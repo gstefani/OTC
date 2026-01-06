@@ -4,7 +4,7 @@
 local config = {
 	runa = {
 		enabled = true,
-		itemId = 55381, -- ID da runa (ex: 3155 = SD, ajuste conforme sua runa)
+		itemId = 3155, -- ID da runa (ex: 3155 = SD, ajuste conforme sua runa)
 		cooldown = 2000, -- 2 segundos em ms
 		lastUse = 0,
 		priority = 1,
@@ -66,14 +66,14 @@ end
 
 -- Função principal do script
 local function combat()
-	local now = g_clock.millis()
+	local currentTime = os.mtime()
 	local target = hasTarget()
 
 	-- Prioridade 1: Runa (apenas com target)
 	if config.runa.enabled and target then
-		if (now - config.runa.lastUse) >= config.runa.cooldown then
+		if (currentTime - config.runa.lastUse) >= config.runa.cooldown then
 			if useRune(config.runa.itemId) then
-				config.runa.lastUse = now
+				config.runa.lastUse = currentTime
 			end
 			return
 		end
@@ -81,27 +81,27 @@ local function combat()
 
 	-- Prioridade 2: RP Safado (apenas com target)
 	if config.rpSafado.enabled and target then
-		if (now - config.rpSafado.lastUse) >= config.rpSafado.cooldown then
+		if (currentTime - config.rpSafado.lastUse) >= config.rpSafado.cooldown then
 			useSpell(config.rpSafado.spell)
-			config.rpSafado.lastUse = now
+			config.rpSafado.lastUse = currentTime
 			return
 		end
 	end
 
 	-- Prioridade 3: Utito Tempo San (sem buff)
 	if config.utitoTempoSan.enabled and not hasPartyBuff() then
-		if (now - config.utitoTempoSan.lastUse) >= config.utitoTempoSan.cooldown then
+		if (currentTime - config.utitoTempoSan.lastUse) >= config.utitoTempoSan.cooldown then
 			useSpell(config.utitoTempoSan.spell)
-			config.utitoTempoSan.lastUse = now
+			config.utitoTempoSan.lastUse = currentTime
 			return
 		end
 	end
 
 	-- Prioridade 4: Capota Noia (apenas com target)
 	if config.capotaNoia.enabled and target then
-		if (now - config.capotaNoia.lastUse) >= config.capotaNoia.cooldown then
+		if (currentTime - config.capotaNoia.lastUse) >= config.capotaNoia.cooldown then
 			useSpell(config.capotaNoia.spell)
-			config.capotaNoia.lastUse = now
+			config.capotaNoia.lastUse = currentTime
 			return
 		end
 	end
@@ -113,39 +113,4 @@ macro(100, function()
 		return
 	end
 	combat()
-end)
-
--- Comandos para ativar/desativar spells individualmente
-onTalk(function(name, level, mode, text, channelId, pos)
-	if name ~= g_game.getCharacterName() then
-		return
-	end
-
-	local cmd = text:lower()
-
-	if cmd == "!runa on" then
-		config.runa.enabled = true
-		print("Runa ativada")
-	elseif cmd == "!runa off" then
-		config.runa.enabled = false
-		print("Runa desativada")
-	elseif cmd == "!rp on" then
-		config.rpSafado.enabled = true
-		print("RP Safado ativado")
-	elseif cmd == "!rp off" then
-		config.rpSafado.enabled = false
-		print("RP Safado desativado")
-	elseif cmd == "!utito on" then
-		config.utitoTempoSan.enabled = true
-		print("Utito Tempo San ativado")
-	elseif cmd == "!utito off" then
-		config.utitoTempoSan.enabled = false
-		print("Utito Tempo San desativado")
-	elseif cmd == "!capota on" then
-		config.capotaNoia.enabled = true
-		print("Capota Noia ativado")
-	elseif cmd == "!capota off" then
-		config.capotaNoia.enabled = false
-		print("Capota Noia desativado")
-	end
 end)

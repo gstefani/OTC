@@ -1,7 +1,7 @@
 if type(storage.moneyItems) ~= "table" then
 	storage.moneyItems = { 3031, 3035 }
 end
-macro(1000, "Exchange money", function()
+macro(300, "Exchange money", function()
 	if not storage.moneyItems[1] then
 		return
 	end
