@@ -1,20 +1,24 @@
-setDefaultTab("Tools")
-
+-- ================= CONFIGURAÇÕES =================
 local DANGER_TILE_ID = 55636
-local SEARCH_RADIUS = 3 -- SQMs
+local SEARCH_RADIUS = 3 -- raio em SQM (N/S/E/W)
 local MOVE_COOLDOWN = 200 -- ms
+-- =================================================
 
+-- ================= UTIL TEMPO ====================
 local function nowMs()
 	if g_clock and g_clock.millis then
 		return g_clock.millis()
 	end
 	return os.time() * 1000
 end
+-- =================================================
 
+-- ================= TILE UTILS ====================
 local function tileHasThingId(tile, targetId)
 	if not tile then
 		return false
 	end
+
 	local things = tile:getThings()
 	if not things then
 		return false
@@ -27,11 +31,15 @@ local function tileHasThingId(tile, targetId)
 	end
 	return false
 end
+-- =================================================
 
+-- ================= DISTÂNCIA =====================
 local function manhattan(a, b)
 	return math.abs(a.x - b.x) + math.abs(a.y - b.y)
 end
+-- =================================================
 
+-- ========== BUSCA EM CRUZ (N/S/E/W) ===============
 local function findSafeTileCross(centerPos, playerPos, radius, dangerId)
 	local bestDist, bestPos = nil, nil
 
@@ -41,6 +49,12 @@ local function findSafeTileCross(centerPos, playerPos, radius, dangerId)
 		{ dx = 0, dy = 1 }, -- sul
 		{ dx = 0, dy = -1 }, -- norte
 	}
+
+	-- embaralha direções para evitar viés fixo
+	for i = #directions, 2, -1 do
+		local j = math.random(i)
+		directions[i], directions[j] = directions[j], directions[i]
+	end
 
 	for _, dir in ipairs(directions) do
 		for step = 1, radius do
@@ -63,10 +77,12 @@ local function findSafeTileCross(centerPos, playerPos, radius, dangerId)
 
 	return bestPos
 end
+-- =================================================
 
--- Macro Principal
+-- ================= MACRO PRINCIPAL ===============
 local lastMove = 0
-macro(200, "Boss Safe Position (2 Modos)", function(m)
+
+macro(200, "Boss Safe Position", function(m)
 	if not m:isOn() then
 		return
 	end
@@ -81,14 +97,31 @@ macro(200, "Boss Safe Position (2 Modos)", function(m)
 		return
 	end
 
+	local playerTile = g_map.getTile(playerPos)
+	if not playerTile then
+		return
+	end
+
+	-- CONDIÇÃO A: player está em tile perigoso
+	local inDanger = tileHasThingId(playerTile, DANGER_TILE_ID)
+
+	-- CONDIÇÃO B: existe boss atacado
 	local boss = g_game.getAttackingCreature()
-	local centerPos
+	local centerPos = nil
 
 	if boss and boss:getPosition() then
-		-- MODO 1: com target (boss como centro)
 		centerPos = boss:getPosition()
-	else
-		-- MODO 2: sem target (player como centro)
+	end
+
+	-- ❗ REGRA CRÍTICA:
+	-- só tenta mover se ESTIVER EM PERIGO
+	if not inDanger then
+		return
+	end
+
+	-- define centro da busca:
+	-- prioridade: boss → fallback: player
+	if not centerPos then
 		centerPos = playerPos
 	end
 
@@ -102,3 +135,4 @@ macro(200, "Boss Safe Position (2 Modos)", function(m)
 		lastMove = now
 	end
 end)
+-- =================================================
