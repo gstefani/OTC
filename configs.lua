@@ -54,10 +54,15 @@ end)
 
 --------------------------------------------------------------------------------------------------------------------------
 
--- Parar CaveBot
+-- Toggle CaveBot
 hotkey("Insert", function()
-	CaveBot.setOff()
-	warn("CaveBot OFF")
+	if CaveBot.isOff() then
+		CaveBot.setOn()
+		warn("CaveBot ON")
+	else
+		CaveBot.setOff()
+		warn("CaveBot OFF")
+	end
 end)
 
 --------------------------------------------------------------------------------------------------------------------------
