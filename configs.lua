@@ -1,13 +1,61 @@
 setDefaultTab("News")
 
+-- Configurações de armazenamento
+storage.configs = storage.configs or {}
+
+local function createToggle(name, label)
+	storage.configs[name] = storage.configs[name] or false
+
+	local button = UI.Button(label .. ": OFF")
+	button:setColor("red")
+
+	local function refresh()
+		if storage.configs[name] then
+			button:setText(label .. ": ON")
+			button:setColor("green")
+		else
+			button:setText(label .. ": OFF")
+			button:setColor("red")
+		end
+	end
+
+	button.onClick = function()
+		storage.configs[name] = not storage.configs[name]
+		refresh()
+	end
+
+	refresh()
+end
+
+UI.Separator()
+UI.Label("Configs Gerais"):setColor("orange")
+
+createToggle("huntWalkSmarter", "Hunt Walk Smarter")
+createToggle("runeOnTarget", "Rune On Target")
+createToggle("autoLootOnLook", "Auto Loot On Look")
+createToggle("autoBuff", "Auto Buff")
+createToggle("revidarPk", "Revidar PK")
+createToggle("manaTrainer", "Mana Trainer Hunt")
+createToggle("iconCaveBot", "Icon CaveBot/TargetBot")
+createToggle("abrirMainBp", "Abrir Main BP")
+createToggle("turnTarget", "Turn Target Canudo")
+createToggle("bugMapMouse", "Bug Map Mouse")
+createToggle("bugMapWasd", "Bug Map WASD")
+createToggle("hideSprites", "Esconder Sprites")
+
+--------------------------------------------------------------------------------------------------------------------------
+
 -- Aumentar tamanho do CaveBot List
-local size = 200
+local size = 250
 CaveBot.actionList:getParent():setHeight(size)
 
 --------------------------------------------------------------------------------------------------------------------------
 
 -- Smart Walk Hunt
 macro(200, "Hunt Walk Smarter", function()
+	if not storage.configs.huntWalkSmarter then
+		return
+	end
 	if g_game:isAttacking() then
 		CaveBot.Config.values["walkDelay"] = 80
 		CaveBot.save()
@@ -25,6 +73,9 @@ UI.TextEdit(storage.runeTarget or "3150", function(widget, text)
 	storage.runeTarget = text
 end)
 macro(200, "Rune On Target", function()
+	if not storage.configs.runeOnTarget then
+		return
+	end
 	if not g_game.isAttacking() then
 		return
 	end
@@ -40,6 +91,9 @@ end)
 -- Auto Loot ao dar look
 local doAutoLootLook = macro(5000, "Auto Loot on Look", function() end)
 onTextMessage(function(mode, text)
+	if not storage.configs.autoLootOnLook then
+		return
+	end
 	if mode == 20 and text:find("You see") and doAutoLootLook:isOn() then
 		local regex = [[You see (?:an|a)([a-z A-Z]*).]]
 		local data = regexMatch(text, regex)[1]
@@ -69,6 +123,9 @@ end)
 
 -- Auto Buff
 macro(200, "AutoBuff", function()
+	if not storage.configs.autoBuff then
+		return
+	end
 	if hasPartyBuff() then
 		return
 	end
@@ -105,6 +162,9 @@ storage[st] = storage[st] or {
 local c = storage[st]
 local target = nil
 local m = macro(250, macroName, function()
+	if not storage.configs.revidarPk then
+		return
+	end
 	-- Atualiza o followTarget com base no estado armazenado
 	followTarget = storage.followTargetState
 
@@ -224,6 +284,9 @@ end)
 
 -- Macro principal
 macro(200, "Mana Trainer Hunt", function()
+	if not storage.configs.manaTrainer then
+		return
+	end
 	if manapercent() >= config.percent_train_ml then
 		say(config.spell_train)
 	end
@@ -253,6 +316,9 @@ tIcon:setSize({ height = 30, width = 50 })
 tIcon.text:setFont("verdana-11px-rounded")
 
 macro(200, function()
+	if not storage.configs.iconCaveBot then
+		return
+	end
 	if CaveBot.isOn() then
 		cIcon.text:setColoredText({ "CaveBot\n", "white", "ON", "green" })
 	else
@@ -269,6 +335,9 @@ end)
 
 -- Abrir BP principal
 macro(200, "Abrir Main BP", function()
+	if not storage.configs.abrirMainBp then
+		return
+	end
 	if not getContainers()[0] and getBack() then
 		g_game.open(getBack())
 	end
@@ -302,6 +371,9 @@ Turn = {}
 Turn.maxDistance = { x = 7, y = 7 }
 Turn.minDistance = 1
 Turn.macro = macro(100, "Turn by Ryan", function()
+	if not storage.configs.turnTarget then
+		return
+	end
 	local target = g_game.getAttackingCreature()
 	if target then
 		local targetPos = target:getPosition()
@@ -334,6 +406,9 @@ end)
 
 -- Bugmap pelo mouse
 macro(50, "Bug Map - Mouse", function(m)
+	if not storage.configs.bugMapMouse then
+		return
+	end
 	--Made By VivoDibra#1182
 	local tile = getTileUnderCursor()
 	if not tile then
@@ -361,6 +436,9 @@ end
 
 consoleModule = modules.game_console
 macro(50, "Bug Map - WASD", function()
+	if not storage.configs.bugMapWasd then
+		return
+	end
 	if modules.corelib.g_keyboard.isKeyPressed("w") and not consoleModule:isChatEnabled() then
 		checkPos(0, -5)
 	elseif modules.corelib.g_keyboard.isKeyPressed("e") and not consoleModule:isChatEnabled() then
@@ -379,3 +457,21 @@ macro(50, "Bug Map - WASD", function()
 		checkPos(-3, -3)
 	end
 end)
+
+--------------------------------------------------------------------------------------------------------------------------
+
+--[[Esconder MAGIAS(SPRITES)]]
+sprh = macro(200, "Esconde Sprite Magias", function() end)
+if not storage.configs.hideSprites then
+	return
+end
+onAddThing(function(tile, thing)
+	if sprh.isOff() then
+		return
+	end
+	if thing:isEffect() then
+		thing:hide()
+	end
+end)
+
+--------------------------------------------------------------------------------------------------------------------------
