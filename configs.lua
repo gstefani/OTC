@@ -81,8 +81,7 @@ ExtrasWindow.closeButton.onClick = function()
 end
 
 -- LABEL --
-local lbT = UI.Label("Scripts Custom")
-lbT:setColor("orange")
+UI.Label("Scripts Custom"):setColor("orange")
 
 -- Button Setup
 local ui = setupUI([[
@@ -297,6 +296,7 @@ end)
 --------------------------------------------------------------------------------------------------------------------------
 
 -- FPS Button
+UI.Label("FPS Button"):setColor("orange")
 UI.Button("5 fps", function()
 	modules.client_options.setOption("backgroundFrameRate", 5)
 end)
