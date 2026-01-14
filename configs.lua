@@ -475,3 +475,13 @@ onAddThing(function(tile, thing)
 end)
 
 --------------------------------------------------------------------------------------------------------------------------
+
+-- FPS Button
+UI.Button("5 fps", function()
+	modules.client_options.setOption("backgroundFrameRate", 5)
+end)
+UI.Button("200 fps", function()
+	modules.client_options.setOption("backgroundFrameRate", 200)
+end)
+
+--------------------------------------------------------------------------------------------------------------------------
